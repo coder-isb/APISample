@@ -1,0 +1,36 @@
+// Services/ValidationHelper.cs
+using EmployeeSearchApi.Models;
+
+public static class ValidationHelper
+{
+    public static (string? ErrorMessage, string? SelectedCriteria) ValidateSearchCriteria(EmployeeSearchFilter filter)
+    {
+        int criteriaCount = 0;
+        string? selectedCriteria = null;
+
+        if (filter.EmployeeIds is { Count: > 0 })
+        {
+            criteriaCount++;
+            selectedCriteria = "EmployeeIds";
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.EmailAddress))
+        {
+            criteriaCount++;
+            selectedCriteria = "EmailAddress";
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.FirstName) && !string.IsNullOrWhiteSpace(filter.LastName))
+        {
+            criteriaCount++;
+            selectedCriteria = "Name"; // or "FirstName + LastName"
+        }
+
+        if (criteriaCount != 1)
+        {
+            return ("Exactly one of the following must be provided: EmployeeIds, EmailAddress, or FirstName + LastName.", null);
+        }
+
+        return (null, selectedCriteria);
+    }
+}
