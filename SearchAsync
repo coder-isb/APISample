@@ -1,0 +1,57 @@
+// Services/EmployeeService.cs
+using EmployeeSearchApi.Models;
+using EmployeeSearchApi.Settings;
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
+
+public class EmployeeService
+{
+    private readonly IMongoCollection<Employee> _employees;
+
+    public EmployeeService(IOptions<MongoDbSettings> settings)
+    {
+        var client = new MongoClient(settings.Value.ConnectionString);
+        var database = client.GetDatabase(settings.Value.DatabaseName);
+        _employees = database.GetCollection<Employee>(settings.Value.EmployeeCollectionName);
+    }
+
+    public async Task<List<Employee>> SearchAsync(EmployeeSearchFilter filter)
+    {
+        var builder = Builders<Employee>.Filter;
+        var filters = new List<FilterDefinition<Employee>>();
+
+        // 🔍 Criterion: EmployeeIds
+        if (filter.EmployeeIds is { Count: > 0 })
+        {
+            filters.Add(builder.In(e => e.EmployeeId, filter.EmployeeIds));
+        }
+
+        // 🔍 Criterion: EmailAddress
+        else if (!string.IsNullOrWhiteSpace(filter.EmailAddress))
+        {
+            filters.Add(builder.Eq(e => e.EmailAddress, filter.EmailAddress));
+        }
+
+        // 🔍 Criterion: FirstName + LastName
+        else if (!string.IsNullOrWhiteSpace(filter.FirstName) && !string.IsNullOrWhiteSpace(filter.LastName))
+        {
+            filters.Add(builder.Eq(e => e.FirstName, filter.FirstName));
+            filters.Add(builder.Eq(e => e.LastName, filter.LastName));
+        }
+
+        // ➕ Optional filters
+        if (!string.IsNullOrWhiteSpace(filter.City))
+        {
+            filters.Add(builder.Eq(e => e.City, filter.City));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.PostalCode))
+        {
+            filters.Add(builder.Eq(e => e.PostalCode, filter.PostalCode));
+        }
+
+        var combinedFilter = builder.And(filters);
+
+        return await _employees.Find(combinedFilter).ToListAsync();
+    }
+}
