@@ -1,0 +1,25 @@
+[HttpPost("search")]
+public async Task<IActionResult> SearchEmployees([FromBody] EmployeeSearchFilter filter)
+{
+    if (!ModelState.IsValid)
+    {
+        return BadRequest(ModelState);
+    }
+
+    var (error, selectedCriteria) = ValidationHelper.ValidateSearchCriteria(filter);
+    if (error != null)
+    {
+        return BadRequest(new { error });
+    }
+
+    // You can log or return selectedCriteria if needed
+    Console.WriteLine($"Search by: {selectedCriteria}");
+
+    var results = await _employeeService.SearchAsync(filter);
+    return Ok(new
+    {
+        criteria = selectedCriteria,
+        resultCount = results.Count,
+        data = results
+    });
+}
